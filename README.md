@@ -4,9 +4,7 @@ Monitor Claude Code activity across multiple Zellij panes in real-time via zjsta
 
 ## Preview
 
-```
-│ ✎ api-server  ✓ frontend  ? pipeline
-```
+![Claude Code Zellij Status Demo](claude_status.gif)
 
 ## Installation
 

@@ -87,50 +87,41 @@ Restart your Zellij session or open a new tab to apply the layout changes.
 
 ```mermaid
 flowchart TB
-    subgraph Zellij Session
-        subgraph Panes
-            CC1[Claude Code #1<br/>Pane 1]
-            CC2[Claude Code #2<br/>Pane 2]
-            CC3[Claude Code #3<br/>Pane 3]
-        end
-        
-        subgraph Hooks
-            AH[claude-activity-hook.sh]
-        end
-        
-        subgraph State
-            SF[(State File<br/>/tmp/claude-zellij-status/<br/>session.json)]
-        end
-        
-        subgraph Status Bar
-            ZJ[zjstatus pipe widget<br/>✎ proj1  ✓ proj2  ? proj3]
-        end
+    subgraph "Claude Code"
+        CC[Claude Code CLI]
+        HookEvents[Hook Events<br/>PreToolUse, PostToolUse,<br/>Stop, Notification, etc.]
     end
-    
-    CC1 -->|PreToolUse<br/>PostToolUse<br/>Stop| AH
-    CC2 -->|PreToolUse<br/>PostToolUse<br/>Stop| AH
-    CC3 -->|PreToolUse<br/>PostToolUse<br/>Stop| AH
-    
-    AH -->|Update| SF
-    AH -->|zellij pipe| ZJ
-    
-    style CC1 fill:#0074d9,color:#fff
-    style CC2 fill:#2ecc40,color:#fff
-    style CC3 fill:#ff4136,color:#fff
-    style ZJ fill:#333,color:#4166F5
+
+    subgraph "Hook Script"
+        ActivityHook[claude-activity-hook.sh<br/>Maps events → activity/color/symbol]
+    end
+
+    subgraph "Shared State"
+        StateFile["/tmp/claude-zellij-status/<br/>{session}.json"]
+    end
+
+    subgraph "Zellij + zjstatus"
+        ZellijPipe[zellij pipe]
+        StatusBar[Status Bar Display<br/>symbol project]
+    end
+
+    CC -->|"stdin JSON"| HookEvents
+    HookEvents -->|"hook_event_name<br/>tool_name"| ActivityHook
+    ActivityHook -->|"Write state"| StateFile
+    ActivityHook -->|"pipe command"| ZellijPipe
+    ZellijPipe --> StatusBar
 ```
 
 ### Data Flow
 
-1. **Claude Code** triggers hooks on events (tool use, stop, etc.)
-2. **Hook script** captures the event and updates the state file
-3. **State file** stores status from all Claude Code panes
-4. **zjstatus** receives pipe message and displays combined status
+1. **Claude Code** emits hook events (PreToolUse, PostToolUse, Stop, etc.) as JSON via stdin
+2. **Hook script** parses the event and maps it to an activity, color, and symbol
+3. **State file** stores status for all Claude Code panes in the Zellij session
+4. **zjstatus** receives pipe message and displays combined status in the status bar
 
 ## Files
 
-- `claude-activity-hook.sh` - Hook script that captures Claude Code events
-- `claude-zellij-status.sh` - Status line script that refreshes zjstatus
+- `claude-activity-hook.sh` - Hook script that captures Claude Code events and updates zjstatus
 - State files stored in `/tmp/claude-zellij-status/`
 
 ## License

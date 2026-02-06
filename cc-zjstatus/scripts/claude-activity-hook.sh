@@ -27,10 +27,10 @@ CWD=$(echo "$INPUT" | jq -r '.cwd // ""' 2>/dev/null || echo "")
 # Get short session ID (last 4 chars for compactness)
 SHORT_SESSION="${SESSION_ID: -4}"
 
-# Get repo/project name and truncate to 12 chars max
+# Get repo/project name and truncate to 16 chars max (last 16 chars)
 PROJECT_NAME=$(basename "$CWD" 2>/dev/null || echo "?")
-if [ ${#PROJECT_NAME} -gt 12 ]; then
-  PROJECT_NAME="${PROJECT_NAME:0:6}..."
+if [ ${#PROJECT_NAME} -gt 16 ]; then
+  PROJECT_NAME="...${PROJECT_NAME: -16}"
 fi
 
 # =============================================================================

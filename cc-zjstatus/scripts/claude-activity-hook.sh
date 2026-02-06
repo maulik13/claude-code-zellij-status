@@ -152,7 +152,7 @@ PreToolUse)
   ;;
 PostToolUse)
   ACTIVITY="think"
-  COLOR="$C_GRAY"
+  COLOR="$C_GREEN"
   SYMBOL=" "
   DONE=false
   ;;
@@ -198,7 +198,7 @@ SubagentStop)
   ;;
 SessionStart)
   ACTIVITY="init"
-  COLOR="$C_BLUE"
+  COLOR="$C_GRAY"
   SYMBOL=" "
   DONE=false
   ;;

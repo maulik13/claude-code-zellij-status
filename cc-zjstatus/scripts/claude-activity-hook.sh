@@ -12,6 +12,11 @@ ZELLIJ_PANE="${ZELLIJ_PANE_ID:-0}"
 STATE_FILE="${STATE_DIR}/${ZELLIJ_SESSION}.json"
 mkdir -p "$STATE_DIR"
 
+# Ensure sync script is discoverable at a stable path for zjstatus command_*
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SYNC_SRC="${SCRIPT_DIR}/claude-status-sync.sh"
+[ -f "$SYNC_SRC" ] && ln -sf "$SYNC_SRC" "${STATE_DIR}/sync.sh" 2>/dev/null
+
 # Read JSON from stdin
 INPUT=$(cat)
 

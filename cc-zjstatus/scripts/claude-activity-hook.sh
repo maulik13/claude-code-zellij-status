@@ -208,32 +208,11 @@ SessionStart)
   DONE=false
   ;;
 SessionEnd)
-  # Session ended - remove from state
+  # Session ended - remove from state (sync script handles display refresh)
   if [ -f "$STATE_FILE" ]; then
     TMP_FILE=$(mktemp)
     jq --arg pane "$ZELLIJ_PANE" 'del(.[$pane])' "$STATE_FILE" >"$TMP_FILE" 2>/dev/null && mv "$TMP_FILE" "$STATE_FILE"
     rm -f "$TMP_FILE"
-  fi
-  # Update zjstatus with remaining sessions
-  if [ -f "$STATE_FILE" ] && [ -s "$STATE_FILE" ]; then
-    SESSIONS=""
-    while IFS= read -r line; do
-      [ -z "$line" ] && continue
-      [ -n "$SESSIONS" ] && SESSIONS="${SESSIONS}  "
-      SESSIONS="${SESSIONS}${line}"
-    done < <(
-      jq -r --arg proj_color "$C_PROJECT" --arg time_color "$C_TIME" '
-                to_entries | sort_by(.key)[] |
-                "#[fg=\(.value.color)]\(.value.symbol) #[fg=\($proj_color)]\(.value.project) #[fg=\($time_color)]@\(.value.time)" +
-                (if .value.context_pct then " #[fg=\(.value.ctx_color // "green")]\(.value.context_pct)%" else "" end)
-            ' "$STATE_FILE" 2>/dev/null
-    )
-
-    if [ -z "$SESSIONS" ]; then
-      zellij -s "$ZELLIJ_SESSION" pipe "zjstatus::pipe::pipe_status::" 2>/dev/null || true
-    else
-      zellij -s "$ZELLIJ_SESSION" pipe "zjstatus::pipe::pipe_status::${SESSIONS}" 2>/dev/null || true
-    fi
   fi
   exit 0
   ;;
@@ -302,24 +281,6 @@ if [ -s "$TMP_FILE" ]; then
   mv "$TMP_FILE" "$STATE_FILE"
 else
   rm -f "$TMP_FILE"
-fi
-
-# Build combined status string
-# Format: symbol project @HH:MM XX%  symbol project @HH:MM XX%
-SESSIONS=""
-while IFS= read -r line; do
-  [ -z "$line" ] && continue
-  [ -n "$SESSIONS" ] && SESSIONS="${SESSIONS}  "
-  SESSIONS="${SESSIONS}${line}"
-done < <(jq -r --arg proj_color "$C_PROJECT" --arg time_color "$C_TIME" '
-    to_entries | sort_by(.key)[] |
-    "#[fg=\(.value.color)]\(.value.symbol) #[fg=\($proj_color)]\(.value.project) #[fg=\($time_color)]@\(.value.time)" +
-    (if .value.context_pct then " #[fg=\(.value.ctx_color // "green")]\(.value.context_pct)%" else "" end)
-' "$STATE_FILE" 2>/dev/null)
-
-# Build combined status
-if [ -n "$SESSIONS" ]; then
-  zellij -s "$ZELLIJ_SESSION" pipe "zjstatus::pipe::pipe_status::${SESSIONS}" 2>/dev/null || true
 fi
 
 # Send zjstatus notification for important events

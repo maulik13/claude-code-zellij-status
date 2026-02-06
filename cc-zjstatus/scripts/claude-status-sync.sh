@@ -1,7 +1,7 @@
 #!/bin/bash
-# Heartbeat script that periodically re-sends Claude status via zellij pipe.
-# This ensures new zjstatus instances (in new tabs) get primed with current status.
-# Called by zjstatus command_* — outputs nothing itself, just sends the pipe message.
+# Reads Claude session state and sends it via zellij pipe to zjstatus.
+# State is pushed to the JSON file by hook events (claude-activity-hook.sh).
+# zjstatus runs this periodically to keep pipe_status synced across all tabs.
 
 STATE_DIR="/tmp/claude-zellij-status"
 ZELLIJ_SESSION="${ZELLIJ_SESSION_NAME:-}"
@@ -41,6 +41,11 @@ done < <(jq -r --arg proj_color "$C_PROJECT" --arg time_color "$C_TIME" '
     (if .value.context_pct then " #[fg=\(.value.ctx_color // "green")]\(.value.context_pct)%" else "" end)
 ' "$STATE_FILE" 2>/dev/null)
 
+# Send via pipe in background to avoid deadlock (zjstatus waits for this
+# script to finish, but zellij pipe waits for zjstatus to process the message)
 if [ -n "$SESSIONS" ]; then
-  zellij pipe "zjstatus::pipe::pipe_status::${SESSIONS}" 2>/dev/null || true
+  (zellij pipe "zjstatus::pipe::pipe_status::${SESSIONS}" &>/dev/null &)
 fi
+
+# Output a space so zjstatus considers this command "active"
+echo " "

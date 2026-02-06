@@ -2,6 +2,7 @@
 # Reads Claude session state and sends it via zellij pipe to zjstatus.
 # State is pushed to the JSON file by hook events (claude-activity-hook.sh).
 # zjstatus runs this periodically to keep pipe_status synced across all tabs.
+#
 
 STATE_DIR="/tmp/claude-zellij-status"
 ZELLIJ_SESSION="${ZELLIJ_SESSION_NAME:-}"
@@ -23,10 +24,10 @@ if [ -f "$CONFIG_FILE" ]; then
     value="${value// /}"
     [[ -z "$key" || "$key" == \#* || "$key" == \;* ]] && continue
     case "$key" in
-      project) C_PROJECT="$value" ;;
-      time) C_TIME="$value" ;;
+    project) C_PROJECT="$value" ;;
+    time) C_TIME="$value" ;;
     esac
-  done < "$CONFIG_FILE"
+  done <"$CONFIG_FILE"
 fi
 
 # Build combined status string (same format as hook script)

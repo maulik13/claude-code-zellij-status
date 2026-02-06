@@ -12,6 +12,11 @@ ZELLIJ_PANE="${ZELLIJ_PANE_ID:-0}"
 STATE_FILE="${STATE_DIR}/${ZELLIJ_SESSION}.json"
 mkdir -p "$STATE_DIR"
 
+# Ensure sync script is discoverable at a stable path for zjstatus command_*
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SYNC_SRC="${SCRIPT_DIR}/claude-status-sync.sh"
+[ -f "$SYNC_SRC" ] && ln -sf "$SYNC_SRC" "${STATE_DIR}/sync.sh" 2>/dev/null
+
 # Read JSON from stdin
 INPUT=$(cat)
 
@@ -152,7 +157,7 @@ PreToolUse)
   ;;
 PostToolUse)
   ACTIVITY="think"
-  COLOR="$C_GRAY"
+  COLOR="$C_GREEN"
   SYMBOL=" "
   DONE=false
   ;;
@@ -198,37 +203,16 @@ SubagentStop)
   ;;
 SessionStart)
   ACTIVITY="init"
-  COLOR="$C_BLUE"
+  COLOR="$C_GRAY"
   SYMBOL=" "
   DONE=false
   ;;
 SessionEnd)
-  # Session ended - remove from state
+  # Session ended - remove from state (sync script handles display refresh)
   if [ -f "$STATE_FILE" ]; then
     TMP_FILE=$(mktemp)
     jq --arg pane "$ZELLIJ_PANE" 'del(.[$pane])' "$STATE_FILE" >"$TMP_FILE" 2>/dev/null && mv "$TMP_FILE" "$STATE_FILE"
     rm -f "$TMP_FILE"
-  fi
-  # Update zjstatus with remaining sessions
-  if [ -f "$STATE_FILE" ] && [ -s "$STATE_FILE" ]; then
-    SESSIONS=""
-    while IFS= read -r line; do
-      [ -z "$line" ] && continue
-      [ -n "$SESSIONS" ] && SESSIONS="${SESSIONS}  "
-      SESSIONS="${SESSIONS}${line}"
-    done < <(
-      jq -r --arg proj_color "$C_PROJECT" --arg time_color "$C_TIME" '
-                to_entries | sort_by(.key)[] |
-                "#[fg=\(.value.color)]\(.value.symbol) #[fg=\($proj_color)]\(.value.project) #[fg=\($time_color)]@\(.value.time)" +
-                (if .value.context_pct then " #[fg=\(.value.ctx_color // "green")]\(.value.context_pct)%" else "" end)
-            ' "$STATE_FILE" 2>/dev/null
-    )
-
-    if [ -z "$SESSIONS" ]; then
-      zellij -s "$ZELLIJ_SESSION" pipe "zjstatus::pipe::pipe_status::" 2>/dev/null || true
-    else
-      zellij -s "$ZELLIJ_SESSION" pipe "zjstatus::pipe::pipe_status::${SESSIONS}" 2>/dev/null || true
-    fi
   fi
   exit 0
   ;;
@@ -297,24 +281,6 @@ if [ -s "$TMP_FILE" ]; then
   mv "$TMP_FILE" "$STATE_FILE"
 else
   rm -f "$TMP_FILE"
-fi
-
-# Build combined status string
-# Format: symbol project @HH:MM XX%  symbol project @HH:MM XX%
-SESSIONS=""
-while IFS= read -r line; do
-  [ -z "$line" ] && continue
-  [ -n "$SESSIONS" ] && SESSIONS="${SESSIONS}  "
-  SESSIONS="${SESSIONS}${line}"
-done < <(jq -r --arg proj_color "$C_PROJECT" --arg time_color "$C_TIME" '
-    to_entries | sort_by(.key)[] |
-    "#[fg=\(.value.color)]\(.value.symbol) #[fg=\($proj_color)]\(.value.project) #[fg=\($time_color)]@\(.value.time)" +
-    (if .value.context_pct then " #[fg=\(.value.ctx_color // "green")]\(.value.context_pct)%" else "" end)
-' "$STATE_FILE" 2>/dev/null)
-
-# Build combined status
-if [ -n "$SESSIONS" ]; then
-  zellij -s "$ZELLIJ_SESSION" pipe "zjstatus::pipe::pipe_status::${SESSIONS}" 2>/dev/null || true
 fi
 
 # Send zjstatus notification for important events

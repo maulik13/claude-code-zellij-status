@@ -175,7 +175,7 @@ Notification)
 UserPromptSubmit)
   ACTIVITY="start"
   COLOR="$C_YELLOW"
-  SYMBOL="●"
+  SYMBOL=" "
   DONE=false
   ;;
 PermissionRequest)

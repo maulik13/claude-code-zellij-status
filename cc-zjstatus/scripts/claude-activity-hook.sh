@@ -217,16 +217,9 @@ SessionEnd)
       [ -n "$SESSIONS" ] && SESSIONS="${SESSIONS}  "
       SESSIONS="${SESSIONS}${line}"
     done < <(
-      NOW_END=$(date +%s)
-      jq -r --arg proj_color "$C_PROJECT" --arg time_color "$C_TIME" --argjson now "$NOW_END" '
+      jq -r --arg proj_color "$C_PROJECT" --arg time_color "$C_TIME" '
                 to_entries | sort_by(.key)[] |
-                (($now - .value.timestamp) |
-                    if . < 60 then "\(.)s"
-                    elif . < 3600 then "\(. / 60 | floor)m"
-                    else "\(. / 3600 | floor)h\((. % 3600) / 60 | floor)m"
-                    end
-                ) as $elapsed |
-                "#[fg=\(.value.color)]\(.value.symbol) #[fg=\($proj_color)]\(.value.project) #[fg=\($time_color)]\($elapsed)" +
+                "#[fg=\(.value.color)]\(.value.symbol) #[fg=\($proj_color)]\(.value.project) #[fg=\($time_color)]@\(.value.time)" +
                 (if .value.context_pct then " #[fg=\(.value.ctx_color // "green")]\(.value.context_pct)%" else "" end)
             ' "$STATE_FILE" 2>/dev/null
     )
@@ -307,21 +300,15 @@ else
 fi
 
 # Build combined status string
-# Format: symbol project XX%  symbol project XX%
+# Format: symbol project @HH:MM XX%  symbol project @HH:MM XX%
 SESSIONS=""
 while IFS= read -r line; do
   [ -z "$line" ] && continue
   [ -n "$SESSIONS" ] && SESSIONS="${SESSIONS}  "
   SESSIONS="${SESSIONS}${line}"
-done < <(jq -r --arg proj_color "$C_PROJECT" --arg time_color "$C_TIME" --argjson now "$NOW" '
+done < <(jq -r --arg proj_color "$C_PROJECT" --arg time_color "$C_TIME" '
     to_entries | sort_by(.key)[] |
-    (($now - .value.timestamp) |
-        if . < 60 then "\(.)s"
-        elif . < 3600 then "\(. / 60 | floor)m"
-        else "\(. / 3600 | floor)h\((. % 3600) / 60 | floor)m"
-        end
-    ) as $elapsed |
-    "#[fg=\(.value.color)]\(.value.symbol) #[fg=\($proj_color)]\(.value.project) #[fg=\($time_color)]\($elapsed)" +
+    "#[fg=\(.value.color)]\(.value.symbol) #[fg=\($proj_color)]\(.value.project) #[fg=\($time_color)]@\(.value.time)" +
     (if .value.context_pct then " #[fg=\(.value.ctx_color // "green")]\(.value.context_pct)%" else "" end)
 ' "$STATE_FILE" 2>/dev/null)
 
